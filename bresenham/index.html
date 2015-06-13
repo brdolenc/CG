@@ -1,0 +1,274 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+
+    <style>
+
+      #grid {
+        width: 100%;
+        height: 800px;
+      }
+
+    </style>
+
+    <script type="text/javascript" src="jquery-1.11.2.min.js"></script>
+
+    <script type="text/javascript">
+
+
+        $(document).ready(function(){
+
+          grid = $("#grid");
+          var widthPixel = 35;
+          var xpi, xpf, ypi, ypf, pixelA, pixelB;
+
+          createPixelGrid = function(id, posX, posY, coordX, coordY){
+            
+            idElement = coordX+'0'+coordY;
+          
+            paddingCalc = ((widthPixel/2)-5);
+  
+            $('<div/>', { id: idElement }).css(
+              {
+                'background-color':"#FFF", 
+                'border':'1px solid #CCC',
+                'position': 'absolute',
+                'left': posX+'px',
+                'top': posY+'px',
+                'width': widthPixel+'px', 
+                'height': (widthPixel-paddingCalc)+'px', 
+                'color': '#CCC',
+                'text-align': 'center',
+                'font-size': '10px',
+                'padding-top': paddingCalc
+              }
+            ).attr(
+              {
+                'data-x': coordX,
+                'data-y': coordY,
+                'data-active': 'false',
+                'class': 'pixelCoord'
+              }
+            ).html(
+               coordX+','+coordY
+            ).appendTo(grid);
+          }
+
+          createGrid = function(x, y){
+
+            numBlock = x*y;
+            posTop = 0;
+            contColumn = 0;
+            countLines = 1;
+            for (var j=1; j<=numBlock; j++) {
+                
+                posX = contColumn*widthPixel;
+
+                createPixelGrid(j, posX, posTop, contColumn, (y-countLines));
+
+                if(j%x==0){
+                  posTop = posTop + widthPixel;
+                  contColumn = 0;
+                  countLines++;
+                }else{
+                  contColumn++;
+                }
+
+            }
+
+          }
+
+          createGrid(20,20);
+
+          $(".pixelCoord").click(function(){
+
+              countActive = 0;
+              $(".pixelCoord").each(function(){
+
+                pixelTemp = $(this);
+                activeTemp = pixelTemp.attr('data-active');
+
+                if(activeTemp=='true'){
+                  countActive++;
+                }
+
+              });
+
+              if(countActive>=2){
+                $(".pixelCoord").attr('data-active','false');
+                pixelA = undefined;
+                pixelB = undefined;
+                countActive=0;
+              }
+
+
+              pixel = $(this);
+              pixelIdDefine = pixel.attr('id');
+              coordX = pixel.attr('data-x');
+              coordY = pixel.attr('data-y');
+              active = pixel.attr('data-active');
+   
+              pixelId = $("#"+(coordX+'0'+coordY));
+              
+
+              if(countActive==0){
+                pixelA = pixelIdDefine;
+              }
+
+              if(countActive==1){
+                pixelB = pixelIdDefine;
+                rasterizeLine(pixelA, pixelB);
+              }
+
+              pixel.css('background-color','#e5f1f4');
+              
+              if(active=='false'){
+                pixel.css('background-color','#e5f1f4').attr('data-active','true');
+              }else if(active=='true'){
+                pixel.attr('data-active','false');
+              }
+
+              
+
+          });
+
+
+          rasterizeLine = function(pixelA, pixelB){
+
+            if(parseInt(pixelA)!=parseInt(pixelB)){
+             
+              more = 0;
+              less = 0;
+
+              if(parseInt(pixelA)<parseInt(pixelB)){
+                less = pixelA;
+                more = pixelB;
+              }else if(parseInt(pixelB)<parseInt(pixelA)){
+                less = pixelB;
+                more = pixelA;
+              }
+
+              coordIni = $("#"+less);
+              coordEnd = $("#"+more);
+
+              xpi = coordIni.attr('data-x');
+              ypi = coordIni.attr('data-y');
+
+              xpf = coordEnd.attr('data-x');
+              ypf = coordEnd.attr('data-y');
+
+              console.log('_____');
+              console.log('|'+xpi+','+ypi+'|');
+              console.log('|'+xpf+','+ypf+'|');
+              console.log('¯¯¯¯¯');
+
+              //calculo de bresse
+              lineto(Number(xpi),Number(ypi),Number(xpf),Number(ypf));
+            
+
+
+            }else{
+
+                console.log('__________');
+                console.log('|inválido|');
+                console.log('¯¯¯¯¯¯¯¯¯¯');
+
+            }
+
+          }
+
+
+        });
+
+
+
+       function lineto(x0, y0, x1, y1){
+
+
+         //zona de loop do alem
+         /*
+            quando o ângulo está muito proximo de 90º gera um loop infinito que precisa ser tratato
+            quando identifico que o angulo está muito proximo inverto x com y e calculo a reta na horizontal
+            e ploto na vertical
+         */
+         var loopAlem = false;
+         if((x1-x0)==1){
+            x0Temp = x0;
+            x0 = y0;
+            y0 = x0Temp;
+
+            x1Temp = x1;
+            x1 = y1;
+            y1 = x1Temp;
+
+            loopAlem = true;
+         }
+
+
+         //delta sempre positivo
+         var deltaX = Math.abs(x1-x0);
+         var deltaY = Math.abs(y1-y0);
+
+         
+
+         //verifica o declive matematico + ou -
+         var slopeX = (x0 < x1) ? 1 : -1; //quando x final menor que x inicial declive negativo
+         var slopeY = (y0 < y1) ? 1 : -1; //quando y final menor que y inicial declive negativo
+
+         var x = x0;
+         var y = y0;
+
+         //diferença entre os deltas
+         var p = deltaX-deltaY;
+
+         while(true){
+
+          //zona de loop do alem
+          if(loopAlem){
+            pixelId = $("#"+(y+'0'+x));
+          }else{
+            pixelId = $("#"+(x+'0'+y));
+          }
+
+          //plota os pixel no grid
+          
+          pixelId.css('background-color','#e5f1f4').attr('data-active','true');
+
+          //quando x e y inicial for igual a x e y final
+          if((x==x1) && (y==y1)){
+            break;
+          }
+          
+          var p2 = 2*p;
+           
+          if (p2 > -deltaY){ 
+            p -= deltaY; 
+            x += slopeX;
+            console.log('slopeX: '+slopeX);
+            console.log('deltaY: '+(-deltaY));
+          }
+
+
+          if (p2 < deltaX){ 
+            p += deltaX; 
+            y += slopeY;
+            console.log('slopeY: '+slopeY);
+            console.log('deltaX: '+(-deltaX));
+          }
+
+         }
+      }
+
+
+    </script>
+
+  </head>
+  <body>
+    
+    
+    <div id="grid"></div>
+
+  </body>
+</html> 
